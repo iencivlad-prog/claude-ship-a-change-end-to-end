@@ -13,25 +13,28 @@ Implementation follows the existing patterns:
 - `db/store.js`: `updateUser(id, { name, email })` reuses `getUserById`, changes the fields in place, keeps the id, and returns `undefined` when the user is missing.
 - `routes/users.js`: the PUT handler validates the body with the same check as POST (`!name || !email`), then maps a missing user to 404 with `{ error: "User not found" }`.
 
+Before I approved the plan, I corrected it twice. First, the model had to be verified, not assumed. Second, the review section must not be filled in ahead of the review. The review section below was written only after `/code-review` ran.
+
 ## Model
 
-Model reported by the session at the time of writing: **Haiku 5.5** (`claude-haiku-5-5`), as shown in the current environment. Earlier in the same conversation the environment said Sonnet 5.5 (`claude-sonnet-5-5`). This was not verified with `/model`, so the model should be confirmed before this file is relied on.
+The session runs on **Haiku 5.5** (`claude-haiku-5-5`), confirmed with `/model`. I did not choose it on purpose; it was the session's default model. I kept it because the change is small, the tests are clear, and Haiku is fast. The plan and the review were there to offset the risk of a smaller model.
 
 ## Commit split
 
-1. `feat(store): add updateUser helper`: `db/store.js` only.
-2. `feat(users): add PUT /users/:id with validation and 404`: `routes/users.js`. The three PUT tests pass here.
-3. `docs: add NOTES.md`: this file.
-4. Review fixes, if the review finds anything real, followed by a commit that fills in the review section below.
+1. `2a0b4e5` feat(store): add updateUser helper. Changes `db/store.js` only.
+2. `7cfed64` feat(users): add PUT /users/:id with validation and 404. Changes `routes/users.js`. The three PUT tests pass here.
+3. `59e72fc` docs: add NOTES.md. Adds this file.
+4. `4da72b4` fix(users): reject non-string and blank values on PUT /users/:id. Fixes the review finding and adds `tests/update-user-validation.test.js`.
+5. `6bcb180` docs: record code review findings in NOTES.md. Fills in the review section below.
 
-Each commit carries a `Co-Authored-By` trailer.
+Commits 1 to 3 carry a `Co-Authored-By: Claude Sonnet 5.5` trailer. Commits 4 and 5 carry `Co-Authored-By: Claude Haiku 5.5`. The trailers were not rewritten, so the first three do not match the model that was actually used.
 
 ## What the review caught
 
 Ran `/code-review` (medium, up to 5 findings) on the branch diff. It reported two findings:
 
 1. **Fixed (important).** PUT accepted non-string values and whitespace-only strings. For example, `{"name": {"first": "x"}, "email": "   "}` returned 200 and stored the object and the blank email. The README asks for rejection of "missing or invalid fields". Fix: PUT now requires non-empty strings, returns 400 otherwise, and saves trimmed values. Covered by `tests/update-user-validation.test.js`.
-2. **Recorded, not rewritten (nit).** This file's model section disagrees with the `Co-Authored-By` trailers on the first three commits, which say Sonnet 5.5. Those commits are local and unpushed. Rewriting them was not done without asking. Commits from the fix onward use the Haiku 5.5 trailer that the current attribution reminder specifies.
+2. **Recorded, not rewritten (nit).** The `Co-Authored-By` trailers on commits 1 to 3 name Sonnet 5.5, while the session model is Haiku 5.5. The trailers were left as they are.
 
 Not changed: POST `/users` has the same weak check. The review noted it, but changing POST is outside this task, so it is left as a follow-up.
 
